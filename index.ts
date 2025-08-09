@@ -19,7 +19,7 @@ if (!videoUrl) {
 }
 
 // If cookies exist
-if (await file(cookiePath).exists) {
+if (await file(cookiePath).exists()) {
   console.log('Using existing cookies');
   await $`./yt-dlp.exe ${videoUrl} --cookies ${cookiePath}`;
   process.exit(0);
