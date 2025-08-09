@@ -3,7 +3,11 @@
     "puppeteer": "^24.15.0"
   },
   "scripts": {
-    "login": "bun index.ts"
+    "build:win": "bun build --compile --target=bun-windows-x64 ./index.ts --outfile dropout-dl",
+    "build:mac-arm": "bun build --compile --target=bun-darwin-arm64 ./index.ts --outfile dropout-dl",
+    "build:mac-x64": "bun build --compile --target=bun-darwin-x64 ./index.ts --outfile dropout-dl",
+    "build:linux": "bun build --compile --target=bun-linux-x64 ./index.ts --outfile dropout-dl"
+
   },
   "name": "dropout-dl",
   "module": "index.ts",
