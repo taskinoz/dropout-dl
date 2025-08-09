@@ -1,0 +1,107 @@
+name: Build & Release (Bun)
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "V*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            target: bun-linux-x64
+            zip: dropout-dl-linux-x64.zip
+            bin: dropout-dl
+            shell: bash
+          - name: macos-x64
+            os: macos-13
+            target: bun-darwin-x64
+            zip: dropout-dl-macos-x64.zip
+            bin: dropout-dl
+            shell: bash
+          - name: macos-arm64
+            os: macos-14
+            target: bun-darwin-arm64
+            zip: dropout-dl-macos-arm64.zip
+            bin: dropout-dl
+            shell: bash
+          - name: windows-x64
+            os: windows-latest
+            target: bun-windows-x64
+            zip: dropout-dl-windows-x64.zip
+            bin: dropout-dl.exe
+            shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install deps
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build (bun compile)
+        run: bun build --compile --target=${{ matrix.target }} ./index.ts --outfile dropout-dl
+        shell: ${{ matrix.shell }}
+
+      # Package: binary + login.json (copied from login.example.json)
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist/package
+          cp ./login.example.json dist/package/login.json
+          # ensure executable bit on unix targets
+          if [ -f "./${{ matrix.bin }}" ]; then chmod +x "./${{ matrix.bin }}"; fi
+          cp "./${{ matrix.bin }}" dist/package/
+          cd dist && zip -r "${{ matrix.zip }}" package/*
+        shell: bash
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Path dist/package -Force | Out-Null
+          Copy-Item -Path .\login.example.json -Destination .\dist\package\login.json -Force
+          Copy-Item -Path ".\${{ matrix.bin }}" -Destination .\dist\package\ -Force
+          Compress-Archive -Path .\dist\package\* -DestinationPath ".\dist\${{ matrix.zip }}" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: dist/${{ matrix.zip }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dropout-dl-*.zip
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            *.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
