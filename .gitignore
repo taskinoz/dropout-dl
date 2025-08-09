@@ -141,6 +141,7 @@ vite.config.ts.timestamp-*
 # Applications
 yt-dlp.exe
 ffmpeg.exe
+dropout-dl.exe
 
 # Cookies
 cookies.txt
