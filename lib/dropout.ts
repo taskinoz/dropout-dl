@@ -1,15 +1,17 @@
 import puppeteer from "puppeteer";
+import { error, log } from "./log";
 
 export async function getCookies(
   DROPOUT_EMAIL: string,
   DROPOUT_PASSWORD: string
 ): Promise<string> {
   if (!DROPOUT_EMAIL || !DROPOUT_PASSWORD) {
-    throw new Error(
-      "Set DROPOUT_EMAIL and DROPOUT_PASSWORD in your environment."
+    error(
+      "Both email and password must be provided. Use -u <email> -p <password> or create a login.json file."
     );
   }
 
+  log("Logging in to Dropout.tv to retrieve cookies...");
 
   const browser = await puppeteer.launch({
     // headless: false,              // set true later once stable
@@ -50,9 +52,13 @@ export async function getCookies(
     page.click("#signin-password-submit", { delay: 50 }),
   ]);
 
+  log("Logging in...");
+
   // Optional: confirm you’re logged in (adjust selector to something only visible when signed in)
   await page
-    .waitForSelector('[data-test-id="account-menu"]', { timeout: 10000 })
+    .waitForSelector('[data-toggle-trigger="account-dropdown"]', {
+      timeout: 10000,
+    })
     .catch(() => {});
 
   // Dump cookies
@@ -73,6 +79,8 @@ export async function getCookies(
       ].join("\t")
     ),
   ].join("\n");
+
+  log("Cookies retrieved successfully.");
 
   await browser.close();
 
