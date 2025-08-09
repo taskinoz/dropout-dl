@@ -145,3 +145,6 @@ ffmpeg.exe
 # Cookies
 cookies.txt
 cookies.json
+
+# Credentials
+login.json
